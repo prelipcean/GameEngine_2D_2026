@@ -185,12 +185,39 @@ message(STATUS "")
 message(STATUS "Configuring main executable: ${PROJECT_NAME}")
 
 # Source files for the main executable
+# Organized by module for easy navigation
 set(SOURCES
+    # Entry point
     src/Main.cpp
-    # Add more source files here as the project grows:
-    # src/Engine.cpp
-    # src/Renderer.cpp
-    # etc.
+    
+    # Core engine systems
+    # src/Core/Window.cpp
+    # src/Core/Engine.cpp
+    
+    # Game framework
+    src/Game/Game.cpp
+    
+    # Graphics subsystem
+    # src/Graphics/Texture.cpp
+    # src/Graphics/Sprite.cpp
+    # src/Graphics/Renderer.cpp
+    
+    # Input handling
+    # src/Input/InputManager.cpp
+    
+    # Audio subsystem
+    # src/Audio/AudioManager.cpp
+    
+    # Scripting (Lua)
+    # src/Scripting/ScriptManager.cpp
+    
+    # Header-only modules (listed for IDE integration):
+    # - src/Core/Logger.hpp
+    # - src/Scene/Scene.hpp
+    # - src/Scene/SceneManager.hpp
+    # - src/Utils/Timer.hpp
+    # - src/Utils/Math.hpp
+    # - src/Utils/ResourceManager.hpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

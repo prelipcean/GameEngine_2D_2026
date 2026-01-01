@@ -1,0 +1,24 @@
+[submodule "external/SDL2"]
+	path = external/SDL2
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "external/SDL2_image"]
+	path = external/SDL2_image
+	url = https://github.com/libsdl-org/SDL_image.git
+[submodule "external/SDL2_ttf"]
+	path = external/SDL2_ttf
+	url = https://github.com/libsdl-org/SDL_ttf.git
+[submodule "external/SDL2_mixer"]
+	path = external/SDL2_mixer
+	url = https://github.com/libsdl-org/SDL_mixer.git
+[submodule "external/sol2"]
+	path = external/sol2
+	url = https://github.com/ThePhD/sol2.git
+[submodule "external/lua"]
+	path = external/lua
+	url = https://github.com/lua/lua.git
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "external/glm"]
+	path = external/glm
+	url = https://github.com/g-truc/glm.git

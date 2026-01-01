@@ -47,12 +47,21 @@ int main(int argc, char* argv[])
   // Print ImGui version
   std::cout << "ImGui version: " << IMGUI_VERSION << std::endl;
 
+  // Print Lua version
+  std::cout << "Lua version: " << LUA_VERSION_MAJOR << "." << LUA_VERSION_MINOR << std::endl;
+
   // Print Sol2 version
-// #ifdef SOL_VERSION
-//   std::cout << "Sol2 version: " << SOL_VERSION << std::endl;
-// #else
-//   std::cout << "Sol2 version: (macro SOL_VERSION not defined)" << std::endl;
-// #endif
+#ifdef SOL_VERSION
+  std::cout << "Sol2 version: " << SOL_VERSION << std::endl;
+#else
+  std::cout << "Sol2 version: (macro SOL_VERSION not defined)" << std::endl;
+#endif
+
+  sol::state lua;
+  lua.open_libraries(sol::lib::base, sol::lib::package);
+  lua.script(R"(
+    print("Hello from Lua!")
+  )");
 
   SDL_Init(SDL_INIT_EVERYTHING);
   SDL_Quit();

@@ -6,6 +6,7 @@
         "${workspaceFolder}/src",
         "${workspaceFolder}/external/glm",
         "${workspaceFolder}/external/imgui",
+        "${workspaceFolder}/external/lua",
         "${workspaceFolder}/external/SDL2/include",
         "${workspaceFolder}/external/SDL2_image/include",
         "${workspaceFolder}/external/SDL2_mixer/include",

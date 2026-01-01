@@ -87,9 +87,10 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--verbose")
 
 # Compiler warnings
-# -Wall         : Enable all common warnings
-# -Wfatal-errors: Stop on first error (makes debugging easier)
-add_compile_options(-Wall -Wfatal-errors)
+# -Wall              : Enable all common warnings
+# -Wfatal-errors     : Stop on first error (makes debugging easier)
+# -Wno-template-body : Ignore template body warnings (sol2 has known issues)
+add_compile_options(-Wall -Wfatal-errors -Wno-template-body)
 # Uncomment to treat warnings as errors:
 # add_compile_options(-Werror)
 

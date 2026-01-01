@@ -218,36 +218,24 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glm                         # OpenGL Mathematics (header-only)
 )
 
-#-------------------------------------------------------------------------------
-# Windows-specific Libraries
-#-------------------------------------------------------------------------------
-if(WIN32)
-    # Windows system libraries required by SDL2
-    target_link_libraries(${PROJECT_NAME} PRIVATE 
-        user32      # User interface
-        gdi32       # Graphics Device Interface
-        winmm       # Windows Multimedia
-        shell32     # Shell functions
-        imm32       # Input Method Manager
-        version     # Version information
-        ole32       # Object Linking and Embedding
-        oleaut32    # OLE Automation
-        setupapi    # Setup API
-        uuid        # UUID library
-    )
-endif()
-
 #===============================================================================
 # Post-Build Commands
 #===============================================================================
 # Copy required DLLs to the executable directory (Windows only)
 if(WIN32)
+    # Use generator expressions to get the actual DLL paths from targets
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${CMAKE_BINARY_DIR}/SDL2-build/SDL2.dll"
-            "${CMAKE_BINARY_DIR}/SDL2_image-build/SDL2_image.dll"
-            "${CMAKE_BINARY_DIR}/SDL2_mixer-build/SDL2_mixer.dll"
-            "${CMAKE_BINARY_DIR}/SDL2_ttf-build/SDL2_ttf.dll"
+            $<TARGET_FILE:SDL2::SDL2>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL2_image::SDL2_image>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL2_mixer::SDL2_mixer>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:SDL2_ttf::SDL2_ttf>
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
         COMMENT "Copying SDL2 DLLs to output directory..."
     )

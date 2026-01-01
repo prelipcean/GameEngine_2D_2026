@@ -54,6 +54,9 @@ set(CMAKE_CXX_STANDARD 17)          # Use C++17 (change to 20 for C++20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # Enforce the standard
 set(CMAKE_CXX_EXTENSIONS OFF)       # Disable compiler-specific extensions
 
+# Generate compile_commands.json for LSP support (clangd, ccls, etc.)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 #===============================================================================
 # Platform Detection & Configuration
 #===============================================================================
@@ -89,8 +92,9 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--verbose")
 # Compiler warnings
 # -Wall              : Enable all common warnings
 # -Wfatal-errors     : Stop on first error (makes debugging easier)
-# -Wno-template-body : Ignore template body warnings (sol2 has known issues)
-add_compile_options(-Wall -Wfatal-errors -Wno-template-body)
+# -Wno-template-body : Ignore template body warnings (sol2 has known issues) - C++ only
+add_compile_options(-Wall -Wfatal-errors)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-template-body>)
 # Uncomment to treat warnings as errors:
 # add_compile_options(-Werror)
 

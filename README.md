@@ -137,6 +137,15 @@ cmake -DUSE_SYSTEM_SDL2=ON \
       ..
 ```
 
+### LSP / Editor Support
+
+The build generates `compile_commands.json` for LSP support (clangd, ccls, etc.). A symlink is provided in the project root for editors like Vim, Neovim, and VS Code to automatically find it.
+
+If you need to regenerate the symlink:
+```bash
+ln -sf build/compile_commands.json .
+```
+
 ---
 
 ## Installing System Dependencies (Optional)

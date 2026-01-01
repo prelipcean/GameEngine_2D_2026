@@ -72,6 +72,8 @@ The project includes a convenient build script with multiple options:
 |---------|-------------|
 | `configure` | Configure the project with CMake |
 | `build` | Build the project (configures if needed) |
+| `libs` | Build only external libraries (Stage 1) |
+| `engine` | Build only engine using pre-built libraries (Stage 2) |
 | `quick` | Quick build (engine sources only, skips library rebuilds) |
 | `rebuild` | Clean and rebuild from scratch |
 | `clean` | Remove the build directory and compiled libraries |
@@ -90,12 +92,71 @@ The project includes a convenient build script with multiple options:
 
 ```bash
 ./build.sh                      # Build in debug mode
+./build.sh libs                 # Build only libraries (Stage 1)
+./build.sh engine               # Build only engine (Stage 2)
 ./build.sh quick                # Quick rebuild (engine only)
 ./build.sh build --release      # Build in release mode
 ./build.sh rebuild --release    # Clean rebuild for release
 ./build.sh run                  # Build and run
 ./build.sh help                 # Show help and system info
 ```
+
+---
+
+## Multi-Stage Build
+
+The engine supports a multi-stage build process for faster development iteration. Libraries are independent of engine code and only need to be rebuilt when dependencies change.
+
+### Stage 1: Build Libraries
+
+Build all external libraries (SDL2, Lua, ImGui, etc.). This is slow but only needs to be done once:
+
+```bash
+./build.sh libs
+```
+
+### Stage 2: Build Engine
+
+Build only your engine code, linking against pre-built libraries. This is fast and ideal for development:
+
+```bash
+./build.sh engine
+```
+
+### Workflow
+
+```bash
+# First time setup (takes 5-10 minutes)
+./build.sh libs
+
+# Fast iteration during development (takes seconds)
+./build.sh engine
+./build.sh engine   # Repeat as you make changes
+./build.sh engine
+
+# Only rebuild libs when dependencies change
+./build.sh libs
+```
+
+### Using CMake Directly
+
+```bash
+# Stage 1: Build libraries only
+cmake -DBUILD_LIBS_ONLY=ON -B build
+cmake --build build --target libs
+
+# Stage 2: Build engine only
+cmake -DBUILD_ENGINE_ONLY=ON -B build
+cmake --build build
+
+# Or use make targets after initial configure
+cd build
+make libs           # Build libraries
+make engine         # Build engine
+make Spark2D_Engine # Build main executable
+```
+
+---
 
 ### Development Workflow
 

@@ -11,6 +11,8 @@
 # Commands:
 #   configure  - Configure the project with CMake
 #   build      - Build the project (configures if needed)
+#   libs       - Build only external libraries
+#   engine     - Build only engine (requires libs first)
 #   quick      - Quick build (engine only, skip library rebuilds)
 #   rebuild    - Clean and rebuild the project
 #   clean      - Remove the build directory
@@ -154,6 +156,69 @@ quick() {
     fi
 }
 
+libs() {
+    info "Building external libraries only..."
+    
+    check_command cmake
+    mkdir -p "$BUILD_DIR"
+    
+    # Configure with BUILD_LIBS_ONLY option
+    info "Configuring for library-only build..."
+    cmake -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DBUILD_LIBS_ONLY=ON \
+          -B "$BUILD_DIR" \
+          ${VERBOSE:+-DCMAKE_VERBOSE_MAKEFILE=ON}
+    
+    if [ $? -ne 0 ]; then
+        error "Configuration failed!"
+        exit 1
+    fi
+    
+    # Build using the libs target
+    cmake --build "$BUILD_DIR" --target libs --parallel "$NUM_CORES"
+    
+    if [ $? -eq 0 ]; then
+        success "Libraries built successfully!"
+        info "Now run './build.sh engine' to build the engine."
+    else
+        error "Library build failed!"
+        exit 1
+    fi
+}
+
+engine() {
+    info "Building engine only (using pre-built libraries)..."
+    
+    # Check if libraries have been built
+    if [ ! -d "$BUILD_DIR/SDL2-build" ]; then
+        error "Libraries not built. Run './build.sh libs' first."
+        exit 1
+    fi
+    
+    # Configure with BUILD_ENGINE_ONLY option
+    info "Configuring for engine-only build..."
+    cmake -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DBUILD_ENGINE_ONLY=ON \
+          -DBUILD_LIBS_ONLY=OFF \
+          -B "$BUILD_DIR" \
+          ${VERBOSE:+-DCMAKE_VERBOSE_MAKEFILE=ON}
+    
+    if [ $? -ne 0 ]; then
+        error "Configuration failed!"
+        exit 1
+    fi
+    
+    # Build only the engine target
+    cmake --build "$BUILD_DIR" --target "$PROJECT_NAME" --parallel "$NUM_CORES"
+    
+    if [ $? -eq 0 ]; then
+        success "Engine built successfully! Executable: $BUILD_DIR/$PROJECT_NAME"
+    else
+        error "Engine build failed!"
+        exit 1
+    fi
+}
+
 rebuild() {
     info "Performing full rebuild..."
     clean
@@ -219,6 +284,8 @@ help() {
     echo -e "${YELLOW}Commands:${NC}"
     echo "  configure  - Configure the project with CMake"
     echo "  build      - Build the project (configures if needed)"
+    echo "  libs       - Build only external libraries (Stage 1)"
+    echo "  engine     - Build only engine using pre-built libs (Stage 2)"
     echo "  quick      - Quick build (engine sources only, skips library rebuilds)"
     echo "  rebuild    - Clean and rebuild the project from scratch"
     echo "  clean      - Remove the build directory and compiled libraries"
@@ -231,11 +298,18 @@ help() {
     echo "  --verbose  - Show detailed build output"
     echo ""
     echo -e "${YELLOW}Examples:${NC}"
-    echo "  ./build.sh                    # Build in debug mode"
+    echo "  ./build.sh                    # Build everything in debug mode"
+    echo "  ./build.sh libs               # Build only libraries (Stage 1)"
+    echo "  ./build.sh engine             # Build only engine (Stage 2)"
     echo "  ./build.sh quick              # Quick rebuild (engine only)"
     echo "  ./build.sh build --release    # Build in release mode"
     echo "  ./build.sh rebuild --release  # Clean rebuild in release mode"
     echo "  ./build.sh run                # Build (if needed) and run"
+    echo ""
+    echo -e "${YELLOW}Multi-Stage Build Workflow:${NC}"
+    echo "  1. ./build.sh libs            # First time: build all libraries"
+    echo "  2. ./build.sh engine          # Fast iteration: build engine only"
+    echo "  3. ./build.sh engine          # Repeat step 2 during development"
     echo ""
     echo -e "${YELLOW}Detected Configuration:${NC}"
     echo "  Platform:    $(uname -s)"
@@ -284,6 +358,8 @@ done
 case "$COMMAND" in
     configure) configure ;;
     build)     build ;;
+    libs)      libs ;;
+    engine)    engine ;;
     quick)     quick ;;
     rebuild)   rebuild ;;
     clean)     clean ;;

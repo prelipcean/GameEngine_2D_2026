@@ -85,6 +85,31 @@ endif()
 # Output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/libs/compiled)
 
+# RPATH Configuration (Unix/Linux/macOS)
+# This allows the executable to find shared libraries in the build directory
+# without needing to install them system-wide or set LD_LIBRARY_PATH
+if(UNIX)
+    # Use RPATH for the build tree
+    set(CMAKE_SKIP_BUILD_RPATH FALSE)
+    
+    # Don't use the install RPATH when building
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+    
+    # Add the build directory library paths to RPATH
+    set(CMAKE_BUILD_RPATH
+        "${CMAKE_BINARY_DIR}/SDL2-build"
+        "${CMAKE_BINARY_DIR}/SDL2_image-build"
+        "${CMAKE_BINARY_DIR}/SDL2_mixer-build"
+        "${CMAKE_BINARY_DIR}/SDL2_ttf-build"
+    )
+    
+    # Use $ORIGIN for portable installs (finds libs relative to executable)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/lib")
+    
+    # Add automatically determined parts of RPATH
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
+
 # Verbose output (useful for debugging build issues)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--verbose")
@@ -111,6 +136,43 @@ option(USE_SYSTEM_SDL2_MIXER "Use system SDL2_mixer instead of building"        
 option(USE_SYSTEM_SDL2_TTF   "Use system SDL2_ttf instead of building"                  OFF)
 
 #===============================================================================
+# Multi-Stage Build Options
+#===============================================================================
+# These options enable a multi-stage build process for faster iteration:
+#
+# Stage 1 - Build libraries only (first time or when dependencies change):
+#   cmake -DBUILD_LIBS_ONLY=ON ..
+#   make
+#
+# Stage 2 - Build engine only (fast iteration during development):
+#   cmake -DBUILD_ENGINE_ONLY=ON ..
+#   make
+#
+# Default - Build everything:
+#   cmake ..
+#   make
+#
+# Or use the convenience targets:
+#   make libs      # Build only libraries
+#   make engine    # Build only engine (requires libs to be built first)
+
+option(BUILD_LIBS_ONLY   "Build only external libraries, skip engine executable"     OFF)
+option(BUILD_ENGINE_ONLY "Build only engine, assume libraries are already built"     OFF)
+
+# Validate mutually exclusive options
+if(BUILD_LIBS_ONLY AND BUILD_ENGINE_ONLY)
+    message(FATAL_ERROR "BUILD_LIBS_ONLY and BUILD_ENGINE_ONLY are mutually exclusive!")
+endif()
+
+if(BUILD_LIBS_ONLY)
+    message(STATUS "[Build Mode] Libraries only - Engine will be skipped")
+elseif(BUILD_ENGINE_ONLY)
+    message(STATUS "[Build Mode] Engine only - Using pre-built libraries")
+else()
+    message(STATUS "[Build Mode] Full build - Libraries and Engine")
+endif()
+
+#===============================================================================
 # External Libraries Configuration
 #===============================================================================
 # Each library is configured in its own cmake file for better organization.
@@ -118,6 +180,27 @@ option(USE_SYSTEM_SDL2_TTF   "Use system SDL2_ttf instead of building"          
 
 message(STATUS "")
 message(STATUS "========== Configuring External Libraries ==========")
+
+#-------------------------------------------------------------------------------
+# When BUILD_ENGINE_ONLY is set, we need to find pre-built libraries
+# instead of building them from source
+#-------------------------------------------------------------------------------
+if(BUILD_ENGINE_ONLY)
+    message(STATUS "[Engine Only Mode] Loading pre-built library configurations...")
+    
+    # Set paths to find pre-built libraries in the build directory
+    set(CMAKE_PREFIX_PATH 
+        ${CMAKE_BINARY_DIR}/SDL2-build
+        ${CMAKE_BINARY_DIR}/SDL2_image-build
+        ${CMAKE_BINARY_DIR}/SDL2_mixer-build
+        ${CMAKE_BINARY_DIR}/SDL2_ttf-build
+        ${CMAKE_PREFIX_PATH}
+    )
+    
+    # For engine-only builds, we still need to include the cmake files
+    # to get the target definitions, but the libraries won't be rebuilt
+    # since they already exist
+endif()
 
 #-------------------------------------------------------------------------------
 # Step 1: SDL2 Core Library (must be first - other SDL libs depend on it)
@@ -180,6 +263,37 @@ message(STATUS "========== All Libraries Configured ==========")
 message(STATUS "")
 
 #===============================================================================
+# Custom Target: libs - Build only external libraries
+#===============================================================================
+# Create a custom target that depends on all library targets
+add_custom_target(libs
+    DEPENDS 
+        SDL2
+        SDL2_image
+        SDL2_mixer
+        SDL2_ttf
+        lua
+        imgui
+    COMMENT "Building external libraries only..."
+)
+
+# If we're only building libraries, stop here
+if(BUILD_LIBS_ONLY)
+    message(STATUS "")
+    message(STATUS "================== Build Configuration ==================")
+    message(STATUS "  Mode:           Libraries Only")
+    message(STATUS "  C++ Standard:   ${CMAKE_CXX_STANDARD}")
+    message(STATUS "  Build Type:     ${CMAKE_BUILD_TYPE}")
+    message(STATUS "")
+    message(STATUS "  After building libraries, run:")
+    message(STATUS "    cmake -DBUILD_ENGINE_ONLY=ON ..")
+    message(STATUS "    make")
+    message(STATUS "==========================================================")
+    message(STATUS "")
+    return()
+endif()
+
+#===============================================================================
 # Main Executable
 #===============================================================================
 message(STATUS "Configuring main executable: ${PROJECT_NAME}")
@@ -221,6 +335,17 @@ set(SOURCES
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+# Add include directory for engine sources
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+#===============================================================================
+# Custom Target: engine - Build only the engine executable
+#===============================================================================
+add_custom_target(engine
+    DEPENDS ${PROJECT_NAME}
+    COMMENT "Building engine only (using pre-built libraries)..."
+)
 
 #-------------------------------------------------------------------------------
 # Link Libraries
@@ -273,6 +398,55 @@ if(WIN32)
     )
 endif()
 
+# Copy shared libraries on Unix/Linux for distribution
+# Note: During development, RPATH handles library discovery.
+#       This is useful for creating redistributable packages.
+if(UNIX AND NOT APPLE)
+    # Create lib directory next to executable
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib
+        COMMENT "Creating lib directory..."
+    )
+    
+    # Copy SDL2 libraries (only if building from source)
+    if(NOT USE_SYSTEM_SDL2)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:SDL2::SDL2>
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/
+            COMMENT "Copying SDL2 shared library..."
+        )
+    endif()
+    
+    if(NOT USE_SYSTEM_SDL2_IMAGE)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:SDL2_image::SDL2_image>
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/
+            COMMENT "Copying SDL2_image shared library..."
+        )
+    endif()
+    
+    if(NOT USE_SYSTEM_SDL2_MIXER)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:SDL2_mixer::SDL2_mixer>
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/
+            COMMENT "Copying SDL2_mixer shared library..."
+        )
+    endif()
+    
+    if(NOT USE_SYSTEM_SDL2_TTF)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:SDL2_ttf::SDL2_ttf>
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>/lib/
+            COMMENT "Copying SDL2_ttf shared library..."
+        )
+    endif()
+endif()
+
 #===============================================================================
 # Build Summary
 #===============================================================================
@@ -282,5 +456,16 @@ message(STATUS "  Project:        ${PROJECT_NAME} v${PROJECT_VERSION}")
 message(STATUS "  C++ Standard:   ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build Type:     ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Install Prefix: ${CMAKE_INSTALL_PREFIX}")
+if(BUILD_ENGINE_ONLY)
+message(STATUS "  Build Mode:     Engine Only (using pre-built libs)")
+else()
+message(STATUS "  Build Mode:     Full Build")
+endif()
+message(STATUS "")
+message(STATUS "  Available targets:")
+message(STATUS "    make              - Build everything")
+message(STATUS "    make libs         - Build libraries only")
+message(STATUS "    make engine       - Build engine only")
+message(STATUS "    make ${PROJECT_NAME}  - Build main executable")
 message(STATUS "=========================================================")
 message(STATUS "")

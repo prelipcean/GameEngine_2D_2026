@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": [
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/external/glm",
+        "${workspaceFolder}/external/imgui",
+        "${workspaceFolder}/external/SDL2/include",
+        "${workspaceFolder}/external/SDL2_image/include",
+        "${workspaceFolder}/external/SDL2_mixer/include",
+        "${workspaceFolder}/external/SDL2_ttf",
+        "${workspaceFolder}/external/sol2/include"
+      ],
+      "defines": [],
+      "intelliSenseMode": "${default}",
+      "cStandard": "c17",
+      "cppStandard": "c++20"
+    }
+  ],
+  "version": 4
+}

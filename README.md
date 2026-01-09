@@ -346,6 +346,37 @@ On macOS, Lua is typically installed as `lua` rather than `lua5.4`. The build sy
 
 When running on Windows, ensure the SDL2 DLLs are in the same directory as the executable. The build system copies them automatically for builds from source.
 
+### NASM / dav1d build errors (SDL2_image)
+
+If the build fails while compiling the `dav1d` library inside SDL2_image (for example with messages mentioning `nasm` or `yasm` not found), it means NASM (Netwide Assembler) is required but not installed or not on your `PATH`.
+
+**Windows**
+
+- Download the **Win64 installer** from the official NASM website: https://www.nasm.us
+- Run the installer and complete the setup.
+- Add the install directory (usually `C:\Program Files\NASM`) to your system `PATH`:
+      - Open "Environment Variables" from the Start menu.
+      - Edit the `Path` entry under **System variables**.
+      - Add the NASM install folder.
+- Close and reopen your terminal/IDE so the updated `PATH` is picked up, then rebuild.
+
+**macOS**
+
+If you use Homebrew:
+
+```bash
+brew install nasm
+```
+
+**Linux (Ubuntu / Debian)**
+
+```bash
+sudo apt-get update
+sudo apt-get install nasm
+```
+
+After installing NASM, rerun the build (for example `./build.sh build` or `cmake --build build`), and the SDL2_image/dav1d step should complete successfully.
+
 ### Download libraries manually
 
 If package managers fail, download directly from official sources:
